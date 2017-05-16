@@ -187,8 +187,8 @@ def read_data(input_file):
 class ForwardFeatureSelector:
 
 	def __init__(self):
-		self._selected_features = None
-		self._selected_features_index = None
+		self._selected_features = []
+		self._selected_features_index = []
 		self._classifier = None
 
 
@@ -200,24 +200,39 @@ class ForwardFeatureSelector:
 
 		index = list(range(len(X[:,0])))
 		X.insert(0, index)
+		unselected_features = np.copy(X)
 
 
-		for i in range(MAX_NUM_FEATURES):
+		for j in range(MAX_NUM_FEATURES):
 			train_accuracies = []
 			mean_score = []
-			for feat in index:
+
+			# Delete selected feature from unselected features
+			if len(selected_features_index != 0):
+				selected_index = -1
+				for i in range(len(unselected_features[0])):
+					if (unselected_features[0][i] == selected_features_index[len(selected_features_index)-1]):
+						selected_index = i
+						break
+				np.delete(unselected_features, selected_index, 1)
+			
+			# Train and get scores of selected features + 1 unselected feature
+			for feat in range(len(unselected_features)):
 				# Concatenate feature to current selected features
-				if selected_features == None:
-					selected_features = X[:,feat]
+				training_features = np.copy(selected_features)
+				if len(selected_features) == 0:
+					training_features = unselected_features[:,feat]
 				else:
-					np.concatenate((selected_features, X[:,feat]), axis=1)
+					np.concatenate((training_features, unselected_features[:,feat]), axis=1)
 
 				# Calculate mean score of LOO cross validation using Gaussian Naive Bayes
 				clf = GaussianNB()
-				mean_score += [np.mean(cross_val_score(clf, X[1:], Y, cv=N))]
+				mean_score += [np.mean(cross_val_score(clf, training_features[1:], Y, cv=N))]
 
 			# Find feature with highest score and select that feature
-			for feat in index:
+			max_index = mean_score.index(max(mean_score))
+			selected_features_index.append(unselected_features[0][max_index])
+			np.concatenate((selected_features, unselected_features[:,feat]), axis=1)
 
 		# Save classifer with selected features
 		clf = GaussianNB()
@@ -226,12 +241,9 @@ class ForwardFeatureSelector:
 		return clf
 
 
-
-
-	def predict(self, X):
-
     def accuracy(self, X, Y):
-		predicted = predict(X)
+		clf = self._classifier
+		return clf.score(X, Y)
 
 
 
