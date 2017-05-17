@@ -189,12 +189,12 @@ class ForwardFeatureSelector:
 
 	def __init__(self):
 		self._selected_features = []
-		self._selected_features_index = []	# To get columns, add 1 to index
+		self._selected_features_index = []
 		self._classifier = None
 
 
 	def fit(self, X, Y):
-		# Iterate through all features, training NB on each feature. Pick feature with lowest training error with 10-fold cross validation
+		# Iterate through all features, training NB on each feature. Pick feature with lowest training error with Leave One Out cross validation
 		selected_features = self._selected_features
 		selected_features_index = self._selected_features_index
 		N = np.shape(X)[0]
@@ -207,12 +207,14 @@ class ForwardFeatureSelector:
 
 
 		for j in range(MAX_NUM_FEATURES):
+			train_accuracies = []
 			mean_score = []
 
 			# Delete selected feature from unselected features
 			if max_index != -1:
 				print("selected feature at index: ", unselected_features[0, max_index])
 				unselected_features = np.delete(unselected_features, max_index, 1)
+				print(np.shape(selected_features))
 			
 			# Train and get scores of selected features + 1 unselected feature
 			for feat in range(np.shape(unselected_features)[1]):
@@ -221,19 +223,23 @@ class ForwardFeatureSelector:
 				if len(selected_features) == 0:
 					training_features = np.copy(unselected_features[:,feat])
 				else:
-					training_features = np.concatenate((training_features, unselected_features[:,feat]), axis=1)
+					np.concatenate((training_features, unselected_features[:,feat]), axis=1)
 
 				# Calculate mean score of LOO cross validation using Gaussian Naive Bayes
 				clf = GaussianNB()
+				print("Training cross_val")
+				print(np.shape(training_features[1:]), Y)
 				m_score = np.mean(cross_val_score(clf, training_features[1:], Y, cv=10))
 				mean_score.append(m_score)
 
 			# Find feature with highest score and select that feature
+			print(mean_score)
 			max_index = mean_score.index(max(mean_score))
 			selected_features_index.append(unselected_features[0, max_index])
 			if len(selected_features) == 0:
 				selected_features = np.copy(unselected_features[:,max_index])
 			else:
+				print("Selecting feature")
 				selected_features = np.concatenate((selected_features, unselected_features[:,max_index]), axis=1)
 
 		# Save classifer with selected features
@@ -247,26 +253,8 @@ class ForwardFeatureSelector:
 
 	def accuracy(self, X, Y):
 		clf = self._classifier
-		selected_features_index = list(map(int, self._selected_features_index))
-		selected_X = np.copy(X[:,selected_features_index[0]])
-		for i in selected_features_index[1:]:
-			selected_X = np.concatenate((selected_X, X[:,i]), axis=1)
-
-		return clf.score(selected_X, np.array(Y).ravel())
-
-	# Returns accuracy at each num of selected features from best feature to worst
-	def accuracy_vary_features(self, X, Y):
-		clf = self._classifier
-		scores = []
-		selected_features_index = list(map(int, self._selected_features_index))
-		selected_X = np.copy(X[:,selected_features_index[0]])
-		scores.append(clf.score(selected_X, np.array(Y).ravel()))
-
-		for i in selected_features_index[1:]:
-			selected_X = np.concatenate((selected_X, X[:,i]), axis=1)
-			scores.append(clf.score(selected_X, np.array(Y).ravel()))
-
-		return scores
+		print(np.shape(X), np.shape(Y))
+		return clf.score(X, np.array(Y).ravel())
 
 
 
@@ -277,9 +265,13 @@ if __name__ == '__main__':
 
 	train_X, train_Y = read_data(argv[1])
 
-	clf = ForwardFeatureSelector()
-	clf.fit(train_X, train_Y)
+	clf = GaussianNB()
+	m_score = np.mean(cross_val_score(clf, train_X, np.array(train_Y).ravel(), cv=10))
+	print(m_score)
 
-	test_X, test_Y = read_data(argv[2])
+	# clf = ForwardFeatureSelector()
+	# clf.fit(train_X, train_Y)
 
-	print(clf.accuracy(test_X, test_Y))
+	# test_X, test_Y = read_data(argv[2])
+
+	# clf.accuracy(test_X, test_Y)
