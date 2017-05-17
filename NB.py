@@ -1,6 +1,7 @@
 from sys import *
 
 import numpy as np
+import csv
 from sklearn.model_selection import cross_val_score
 from sklearn.naive_bayes import GaussianNB
 
@@ -146,7 +147,7 @@ def read_data(input_file):
             sample.append(1) if amphetamines == 1 else sample.append(0)
             sample.append(1) if cannabis == 1 else sample.append(0)
             sample.append(1) if cocaine == 1 else sample.append(0)
-            sample.append(1) if halluciongens == 1 else sample.append(0)
+            sample.append(1) if hallucinogens == 1 else sample.append(0)
             sample.append(1) if inhalants == 1 else sample.append(0)
             sample.append(1) if heroin == 1 else sample.append(0)
             sample.append(1) if other_drugs == 1 else sample.append(0)
@@ -155,7 +156,7 @@ def read_data(input_file):
             sample.append(1) if thought_death == 1 else sample.append(0)
             sample.append(1) if want_alone == 1 else sample.append(0)
             sample.append(1) if lost_appetite == 1 else sample.append(0)
-            sample.append(1) if abnormal_appetite_== 1 else sample.append(0)
+            sample.append(1) if abnormal_appetite == 1 else sample.append(0)
             sample.append(1) if sleeping_issues == 1 else sample.append(0)
             sample.append(1) if sleep_alot == 1 else sample.append(0)
             sample.append(1) if often_tired == 1 else sample.append(0)
@@ -180,9 +181,9 @@ def read_data(input_file):
             Y.append(depression)
             if depression == 0:
                 depression_no += 1
-    print(depression_no)
-    print(len(Y))
-    return np.matrix(X), np.matrix(Y).T
+    # print(depression_no)
+    # print(len(Y))
+    return np.array(X), np.matrix(Y).T
 
 class ForwardFeatureSelector:
 
@@ -196,11 +197,14 @@ class ForwardFeatureSelector:
 		# Iterate through all features, training NB on each feature. Pick feature with lowest training error with Leave One Out cross validation
 		selected_features = self._selected_features
 		selected_features_index = self._selected_features_index
-		N = len(X)
+		N = np.shape(X)[0]
 
-		index = list(range(len(X[:,0])))
-		X.insert(0, index)
-		unselected_features = np.copy(X)
+		index = list(range(np.shape(X)[1]))
+		index = np.array(index)
+		unselected_features = np.vstack((index, X))
+		max_index = -1
+
+		
 
 
 		for j in range(MAX_NUM_FEATURES):
@@ -208,40 +212,45 @@ class ForwardFeatureSelector:
 			mean_score = []
 
 			# Delete selected feature from unselected features
-			if len(selected_features_index != 0):
-				selected_index = -1
-				for i in range(len(unselected_features[0])):
-					if (unselected_features[0][i] == selected_features_index[len(selected_features_index)-1]):
-						selected_index = i
-						break
-				np.delete(unselected_features, selected_index, 1)
+			if max_index != -1:
+				print("selected feature at index: ", max_index)
+				np.delete(unselected_features, max_index, 1)
 			
 			# Train and get scores of selected features + 1 unselected feature
-			for feat in range(len(unselected_features)):
+			feats_left = len(np.array(unselected_features)[0])
+			for feat in range(feats_left):
 				# Concatenate feature to current selected features
 				training_features = np.copy(selected_features)
 				if len(selected_features) == 0:
-					training_features = unselected_features[:,feat]
+					training_features = np.copy(unselected_features[:,feat])
+					training_features = np.matrix([training_features]).T
 				else:
 					np.concatenate((training_features, unselected_features[:,feat]), axis=1)
 
 				# Calculate mean score of LOO cross validation using Gaussian Naive Bayes
 				clf = GaussianNB()
-				mean_score += [np.mean(cross_val_score(clf, training_features[1:], Y, cv=N))]
+				print(np.shape(training_features[1:]), np.shape(Y.reshape(N,)))
+				m_score = np.mean(cross_val_score(clf, training_features[1:], Y.reshape(N,), cv=10))
+				mean_score.append(m_score)
 
 			# Find feature with highest score and select that feature
 			max_index = mean_score.index(max(mean_score))
-			selected_features_index.append(unselected_features[0][max_index])
-			np.concatenate((selected_features, unselected_features[:,feat]), axis=1)
+			selected_features_index.append(unselected_features[0,max_index])
+			if len(selected_features) == 0:
+				selected_features = np.copy( unselected_features[:,max_index])
+			else:
+				np.concatenate((selected_features, unselected_features[:,max_index]), axis=1)
 
 		# Save classifer with selected features
 		clf = GaussianNB()
-		clf.fit(selected_features, Y)
+		clf.fit(selected_features[1:], Y)
 		self._classifier = clf
+		self._selected_features = selected_features
+		self._selected_features_index = selected_features_index
 		return clf
 
 
-    def accuracy(self, X, Y):
+	def accuracy(self, X, Y):
 		clf = self._classifier
 		return clf.score(X, Y)
 
@@ -259,4 +268,5 @@ if __name__ == '__main__':
 
 	test_X, test_Y = read_data(argv[2])
 
-	clf.accuracy(test_X, test_Y)
+	print(clf.accuracy(test_X, test_Y))
+	print(clf._selected_features_index)
