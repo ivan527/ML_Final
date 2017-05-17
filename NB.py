@@ -195,6 +195,15 @@ class ForwardFeatureSelector:
 
 	def fit(self, X, Y):
 		# Iterate through all features, training NB on each feature. Pick feature with lowest training error with 10-fold cross validation
+		global cross_validated_errors
+		global training_errors
+		global test_errors
+		global test_X
+		global test_Y
+		cross_validated_errors = []
+		training_errors = []
+		test_errors = []
+
 		selected_features = self._selected_features
 		selected_features_index = self._selected_features_index
 		N = np.shape(X)[0]
@@ -211,7 +220,7 @@ class ForwardFeatureSelector:
 
 			# Delete selected feature from unselected features
 			if max_index != -1:
-				print("selected feature at index: ", unselected_features[0, max_index])
+				#print("selected feature at index: ", unselected_features[0, max_index])
 				unselected_features = np.delete(unselected_features, max_index, 1)
 			
 			# Train and get scores of selected features + 1 unselected feature
@@ -229,12 +238,21 @@ class ForwardFeatureSelector:
 				mean_score.append(m_score)
 
 			# Find feature with highest score and select that feature
+			cross_validated_errors.append(max(mean_score))
 			max_index = mean_score.index(max(mean_score))
 			selected_features_index.append(unselected_features[0, max_index])
 			if len(selected_features) == 0:
 				selected_features = np.copy(unselected_features[:,max_index])
 			else:
 				selected_features = np.concatenate((selected_features, unselected_features[:,max_index]), axis=1)
+
+			# Pull data to draw graph
+			clf = GaussianNB()
+			clf.fit(selected_features[1:], Y)
+			self._classifier = clf
+			self._selected_features_index = selected_features_index
+			training_errors.append(self.accuracy(X, Y))
+			test_errors.append(self.accuracy(test_X, test_Y))
 
 		# Save classifer with selected features
 		clf = GaussianNB()
@@ -275,11 +293,17 @@ if __name__ == '__main__':
 	if (len(argv) != 3):
 		print("Usage: python NB.py <train file> <test_file>")
 
+	global test_X
+	global test_Y
 	train_X, train_Y = read_data(argv[1])
+	test_X, test_Y = read_data(argv[2])
 
 	clf = ForwardFeatureSelector()
 	clf.fit(train_X, train_Y)
 
-	test_X, test_Y = read_data(argv[2])
 
 	print(clf.accuracy(test_X, test_Y))
+	print(cross_validated_errors)
+	print(training_errors)
+	print(test_errors)
+	print(clf._selected_features_index)
