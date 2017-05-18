@@ -264,14 +264,20 @@ if __name__ == '__main__':
 		print("Usage: python NB.py <train file> <test_file>")
 
 	train_X, train_Y = read_data(argv[1])
+	test_X, test_Y = read_data(argv[2])
 
 	clf = GaussianNB()
 	m_score = np.mean(cross_val_score(clf, train_X, np.array(train_Y).ravel(), cv=10))
 	print(m_score)
 
+	clf = GaussianNB()
+	clf.fit(train_X, np.array(train_Y).ravel())
+	print("training score: ", clf.score(train_X, np.array(train_Y).ravel()))
+	print("test score: ", clf.score(test_X, np.array(test_Y).ravel()))
+
 	# clf = ForwardFeatureSelector()
 	# clf.fit(train_X, train_Y)
 
-	# test_X, test_Y = read_data(argv[2])
+	
 
 	# clf.accuracy(test_X, test_Y)

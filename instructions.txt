@@ -1,0 +1,3 @@
+To run our code, have python 3 installed and run the following command:
+
+	python NB.py data_NESARC_tr.csv data_NESARC_ts.csv

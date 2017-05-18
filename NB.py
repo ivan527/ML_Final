@@ -195,14 +195,14 @@ class ForwardFeatureSelector:
 
 	def fit(self, X, Y):
 		# Iterate through all features, training NB on each feature. Pick feature with lowest training error with 10-fold cross validation
-		global cross_validated_errors
-		global training_errors
-		global test_errors
+		global cross_validated_accuracy
+		global training_accuracy
+		global test_accuracy
 		global test_X
 		global test_Y
-		cross_validated_errors = []
-		training_errors = []
-		test_errors = []
+		cross_validated_accuracy = []
+		training_accuracy = []
+		test_accuracy = []
 
 		selected_features = self._selected_features
 		selected_features_index = self._selected_features_index
@@ -238,7 +238,7 @@ class ForwardFeatureSelector:
 				mean_score.append(m_score)
 
 			# Find feature with highest score and select that feature
-			cross_validated_errors.append(max(mean_score))
+			cross_validated_accuracy.append(max(mean_score))
 			max_index = mean_score.index(max(mean_score))
 			selected_features_index.append(unselected_features[0, max_index])
 			if len(selected_features) == 0:
@@ -251,8 +251,8 @@ class ForwardFeatureSelector:
 			clf.fit(selected_features[1:], Y)
 			self._classifier = clf
 			self._selected_features_index = selected_features_index
-			training_errors.append(self.accuracy(X, Y))
-			test_errors.append(self.accuracy(test_X, test_Y))
+			training_accuracy.append(self.accuracy(X, Y))
+			test_accuracy.append(self.accuracy(test_X, test_Y))
 
 		# Save classifer with selected features
 		clf = GaussianNB()
@@ -302,8 +302,8 @@ if __name__ == '__main__':
 	clf.fit(train_X, train_Y)
 
 
-	print(clf.accuracy(test_X, test_Y))
-	print(cross_validated_errors)
-	print(training_errors)
-	print(test_errors)
+	print("Test accuracy with all 20 features: ", clf.accuracy(test_X, test_Y))
+	print("Training accuracy with cross validation varying number of features: ", cross_validated_accuracy)
+	print("Training accuracy varying number of features: ", training_accuracy)
+	print("Test accuracy varying number of features: ", test_accuracy)
 	print(clf._selected_features_index)
