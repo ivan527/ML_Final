@@ -181,8 +181,10 @@ def read_data(input_file):
             Y.append(depression)
             if depression == 0:
                 depression_no += 1
-    # print(depression_no)
-    # print(len(Y))
+    print "number of not depressed -----"
+    print(depression_no)
+    print "Number of Samples -----"
+    print(len(Y))
     return np.matrix(X), np.matrix(Y).T
 
 class ForwardFeatureSelector:
